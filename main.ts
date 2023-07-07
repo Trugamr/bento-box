@@ -1,13 +1,15 @@
 import { ConnInfo, serve } from "https://deno.land/std@0.193.0/http/server.ts";
 
 // Read scripts from disk
-const scripts: Array<{
-  route: string;
-  handler: (
-    request: Request,
-    connInfo: ConnInfo,
-  ) => Response | Promise<Response>;
-}> = [];
+const scripts: Map<
+  string,
+  {
+    handler: (
+      request: Request,
+      connInfo: ConnInfo,
+    ) => Response | Promise<Response>;
+  }
+> = new Map();
 
 for (const script of Deno.readDirSync("scripts")) {
   // Only read files
@@ -22,14 +24,11 @@ for (const script of Deno.readDirSync("scripts")) {
     Deno.exit(1);
   }
 
-  scripts.push({
-    route: `/${script.name.replace(/\.ts$/, "")}`,
-    handler,
-  });
+  scripts.set(`/${script.name.replace(/\.ts$/, "")}`, { handler });
 }
 
 // Check if any scripts were found
-if (!scripts.length) {
+if (!scripts.size) {
   console.error("No scripts found in scripts/ directory");
   Deno.exit(1);
 }
@@ -38,7 +37,7 @@ if (!scripts.length) {
 const handler = (request: Request, connInfo: ConnInfo) => {
   const url = new URL(request.url);
 
-  const script = scripts.find((script) => script.route === url.pathname);
+  const script = scripts.get(url.pathname);
   if (script) {
     return script.handler(request, connInfo);
   }
